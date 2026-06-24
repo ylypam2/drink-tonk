@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Usuario {
+  id        String   @id @default(uuid())
+  nombre    String
+  email     String   @unique
+  password  String
+  rol       Rol      @default(EMPLEADO)
+  estado    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  compras   Compra[]
+  ventas    Venta[]
+
+  @@map("usuarios")
+}
+
+model Producto {
+  id         String   @id @default(uuid())
+  nombre     String
+  precio     Decimal  @db.Decimal(10, 2)
+  stock      Int      @default(0)
+  categoria  String   @default("General")
+  imagen     String   @default("")
+  disponible Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  detallesCompra CompraDetalle[]
+  detallesVenta  VentaDetalle[]
+
+  @@map("productos")
+}
+
+model Compra {
+  id         String   @id @default(uuid())
+  usuarioId  String
+  total      Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  detalles CompraDetalle[]
+
+  @@map("compras")
+}
+
+model CompraDetalle {
+  id         String   @id @default(uuid())
+  compraId   String
+  productoId String
+  cantidad   Int
+  precioUnitario Decimal @db.Decimal(10, 2)
+  subtotal   Decimal  @db.Decimal(10, 2)
+
+  compra   Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@map("compra_detalles")
+}
+
+model Venta {
+  id         String   @id @default(uuid())
+  usuarioId  String
+  total      Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  detalles VentaDetalle[]
+
+  @@map("ventas")
+}
+
+model VentaDetalle {
+  id         String   @id @default(uuid())
+  ventaId    String
+  productoId String
+  cantidad   Int
+  precioUnitario Decimal @db.Decimal(10, 2)
+  subtotal   Decimal  @db.Decimal(10, 2)
+
+  venta    Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@map("venta_detalles")
+}
+
+enum Rol {
+  ADMIN
+  EMPLEADO
+}
