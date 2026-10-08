@@ -1,71 +1,81 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import dbConnect from "@/lib/mongodb";
-import Producto from "@/models/Producto";
+import { prisma } from "@/lib/prisma";
 
 export async function crearProducto(formData: FormData) {
-  await dbConnect();
-
   const nombre = formData.get("nombre")?.toString().trim() || "";
-  const precio = Number(formData.get("precio"));
+  const precioVenta = Number(formData.get("precioVenta"));
+  const costoProduccion = Number(formData.get("costoProduccion")) || 0;
   const stock = Number(formData.get("stock"));
-  const categoria = formData.get("categoria")?.toString().trim() || "General";
-  const imagen = formData.get("imagen")?.toString().trim() || "";
+  const stockMinimo = Number(formData.get("stockMinimo")) || 10;
+  const unidadMedida = formData.get("unidadMedida")?.toString() || "unidad";
+  const descripcion = formData.get("descripcion")?.toString().trim() || "";
 
   if (!nombre) throw new Error("El nombre es obligatorio");
-  if (isNaN(precio) || precio < 0) throw new Error("Precio inválido");
+  if (isNaN(precioVenta) || precioVenta < 0) throw new Error("Precio de venta inválido");
   if (isNaN(stock) || stock < 0) throw new Error("Stock inválido");
 
-  await Producto.create({
-    nombre,
-    precio,
-    stock,
-    categoria,
-    imagen,
-    disponible: stock > 0,
+  await prisma.producto.create({
+    data: {
+      nombre,
+      descripcion,
+      precioVenta,
+      costoProduccion,
+      stock,
+      stockMinimo,
+      unidadMedida,
+      estado: true,
+    },
   });
 
   revalidatePath("/admin");
+  revalidatePath("/productos");
 }
 
 export async function actualizarProducto(formData: FormData) {
-  await dbConnect();
-
   const id = formData.get("id")?.toString();
   const nombre = formData.get("nombre")?.toString().trim() || "";
-  const precio = Number(formData.get("precio"));
+  const precioVenta = Number(formData.get("precioVenta"));
+  const costoProduccion = Number(formData.get("costoProduccion")) || 0;
   const stock = Number(formData.get("stock"));
-  const categoria = formData.get("categoria")?.toString().trim() || "General";
-  const imagen = formData.get("imagen")?.toString().trim() || "";
+  const stockMinimo = Number(formData.get("stockMinimo")) || 10;
+  const unidadMedida = formData.get("unidadMedida")?.toString() || "unidad";
+  const descripcion = formData.get("descripcion")?.toString().trim() || "";
 
   if (!id) throw new Error("ID no válido");
   if (!nombre) throw new Error("El nombre es obligatorio");
-  if (isNaN(precio) || precio < 0) throw new Error("Precio inválido");
+  if (isNaN(precioVenta) || precioVenta < 0) throw new Error("Precio de venta inválido");
   if (isNaN(stock) || stock < 0) throw new Error("Stock inválido");
 
-  await Producto.findByIdAndUpdate(id, {
-    nombre,
-    precio,
-    stock,
-    categoria,
-    imagen,
-    disponible: stock > 0,
+  await prisma.producto.update({
+    where: { id },
+    data: {
+      nombre,
+      descripcion,
+      precioVenta,
+      costoProduccion,
+      stock,
+      stockMinimo,
+      unidadMedida,
+    },
   });
 
   revalidatePath("/admin");
+  revalidatePath("/productos");
 }
 
 export async function eliminarProducto(formData: FormData) {
-  await dbConnect();
-
   const id = formData.get("id")?.toString();
 
   if (!id) {
     throw new Error("ID no válido");
   }
 
-  await Producto.findByIdAndDelete(id);
+  await prisma.producto.delete({
+    where: { id }
+  });
 
   revalidatePath("/admin");
+  revalidatePath("/productos");
 }

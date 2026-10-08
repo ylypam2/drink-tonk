@@ -1,0 +1,130 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Usuario {
+  id        String   @id @default(uuid())
+  nombre    String
+  email     String   @unique
+  password  String
+  rol       Rol      @default(EMPLEADO)
+  estado    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  compras Compra[]
+  ventas  Venta[]
+
+  @@map("usuarios")
+}
+
+model Categoria {
+  id          String   @id @default(uuid())
+  nombre      String   @unique
+  descripcion String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  productos Producto[]
+
+  @@map("categorias")
+}
+
+model Producto {
+  id         String   @id @default(uuid())
+  categoriaId String
+  nombre     String
+  precio     Decimal  @db.Decimal(10, 2)
+  stock      Int      @default(0)
+  imagen     String   @default("")
+  disponible Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  categoria        Categoria        @relation(fields: [categoriaId], references: [id])
+  detallesCompra   CompraDetalle[]
+  detallesVenta    VentaDetalle[]
+
+  @@map("productos")
+}
+
+model Proveedor {
+  id          String   @id @default(uuid())
+  razonSocial String
+  contacto    String?
+  telefono    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  compras Compra[]
+
+  @@map("proveedores")
+}
+
+model Compra {
+  id          String   @id @default(uuid())
+  usuarioId   String
+  proveedorId String
+  total       Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id])
+  proveedor Proveedor @relation(fields: [proveedorId], references: [id])
+  detalles  CompraDetalle[]
+
+  @@map("compras")
+}
+
+model CompraDetalle {
+  id         String   @id @default(uuid())
+  compraId   String
+  productoId String
+  cantidad   Int
+  precioUnitario Decimal @db.Decimal(10, 2)
+  subtotal   Decimal  @db.Decimal(10, 2)
+
+  compra   Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@map("compra_detalles")
+}
+
+model Venta {
+  id         String   @id @default(uuid())
+  usuarioId  String
+  total      Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  detalles VentaDetalle[]
+
+  @@map("ventas")
+}
+
+model VentaDetalle {
+  id         String   @id @default(uuid())
+  ventaId    String
+  productoId String
+  cantidad   Int
+  precioUnitario Decimal @db.Decimal(10, 2)
+  subtotal   Decimal  @db.Decimal(10, 2)
+
+  venta    Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@map("venta_detalles")
+}
+
+enum Rol {
+  ADMIN
+  EMPLEADO
+}

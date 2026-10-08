@@ -16,7 +16,7 @@ export async function obtenerSesion() {
 export async function requireAdmin() {
   const sesion = await obtenerSesion();
 
-  if (!sesion || sesion.rol !== "admin") {
+  if (!sesion || sesion.rol !== "ADMIN") {
     return null;
   }
 
@@ -30,7 +30,7 @@ export async function requireEmpleadoOAdmin() {
     return null;
   }
 
-  if (sesion.rol !== "admin" && sesion.rol !== "empleado") {
+  if (sesion.rol !== "ADMIN" && sesion.rol !== "EMPLEADO") {
     return null;
   }
 

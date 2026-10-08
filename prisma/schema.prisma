@@ -9,94 +9,230 @@ datasource db {
   provider = "postgresql"
 }
 
-model Usuario {
-  id        String   @id @default(uuid())
-  nombre    String
-  email     String   @unique
-  password  String
-  rol       Rol      @default(EMPLEADO)
-  estado    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Factura {
+  id            String   @id @default(cuid())
+  ventaId       String   @unique
+  numeroFactura String   @unique
+  fechaEmision  DateTime @default(now())
+  subtotal      Decimal  @db.Decimal(10, 2)
+  iva           Decimal  @db.Decimal(10, 2)
+  total         Decimal  @db.Decimal(10, 2)
+  estado        String   @default("emitida")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  compras   Compra[]
-  ventas    Venta[]
+  venta Venta @relation(fields: [ventaId], references: [id], onDelete: Cascade)
 
-  @@map("usuarios")
-}
-
-model Producto {
-  id         String   @id @default(uuid())
-  nombre     String
-  precio     Decimal  @db.Decimal(10, 2)
-  stock      Int      @default(0)
-  categoria  String   @default("General")
-  imagen     String   @default("")
-  disponible Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  detallesCompra CompraDetalle[]
-  detallesVenta  VentaDetalle[]
-
-  @@map("productos")
-}
-
-model Compra {
-  id         String   @id @default(uuid())
-  usuarioId  String
-  total      Decimal  @db.Decimal(10, 2)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
-  detalles CompraDetalle[]
-
-  @@map("compras")
-}
-
-model CompraDetalle {
-  id         String   @id @default(uuid())
-  compraId   String
-  productoId String
-  cantidad   Int
-  precioUnitario Decimal @db.Decimal(10, 2)
-  subtotal   Decimal  @db.Decimal(10, 2)
-
-  compra   Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
-  producto Producto @relation(fields: [productoId], references: [id])
-
-  @@map("compra_detalles")
+  @@map("facturas")
 }
 
 model Venta {
-  id         String   @id @default(uuid())
+  id         String   @id @default(cuid())
   usuarioId  String
+  clienteId  String?
+  fechaVenta DateTime @default(now())
+  subtotal   Decimal  @db.Decimal(10, 2)
+  iva        Decimal  @db.Decimal(10, 2)
   total      Decimal  @db.Decimal(10, 2)
+  metodoPago String
+  estado     String   @default("completada")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
-  detalles VentaDetalle[]
+  usuario       Usuario        @relation(fields: [usuarioId], references: [id])
+  cliente       Cliente?       @relation(fields: [clienteId], references: [id])
+  factura       Factura?
+  detallesVenta DetalleVenta[]
 
   @@map("ventas")
 }
 
-model VentaDetalle {
-  id         String   @id @default(uuid())
-  ventaId    String
-  productoId String
-  cantidad   Int
-  precioUnitario Decimal @db.Decimal(10, 2)
-  subtotal   Decimal  @db.Decimal(10, 2)
+model DetalleVenta {
+  id             String   @id @default(cuid())
+  ventaId        String
+  productoId     String
+  cantidad       Int
+  precioUnitario Decimal  @db.Decimal(10, 2)
+  subtotal       Decimal  @db.Decimal(10, 2)
+  createdAt      DateTime @default(now())
 
   venta    Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
   producto Producto @relation(fields: [productoId], references: [id])
 
-  @@map("venta_detalles")
+  @@map("detalles_venta")
 }
 
-enum Rol {
-  ADMIN
-  EMPLEADO
+model Usuario {
+  id        String   @id @default(cuid())
+  nombre    String
+  email     String   @unique
+  password  String
+  rol       String   @default("empleado")
+  estado    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ventas                Venta[]
+  movimientosInventario MovimientoInventario[]
+  comprasInsumo         CompraInsumo[]
+
+  @@map("usuarios")
+}
+
+model Cliente {
+  id                String   @id @default(cuid())
+  nombre            String
+  identificacion    String   @unique
+  telefono          String?
+  email             String?
+  direccion         String?
+  tipoCliente       String   @default("regular")
+  creditoDisponible Decimal  @default(0) @db.Decimal(10, 2)
+  estado            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  ventas                  Venta[]
+  historialCambiosCliente HistorialCambiosCliente[]
+
+  @@map("clientes")
+}
+
+model MovimientoInventario {
+  id             String   @id @default(cuid())
+  productoId     String
+  usuarioId      String
+  tipoMovimiento String
+  cantidad       Int
+  stockAnterior  Int
+  stockNuevo     Int
+  motivo         String?
+  createdAt      DateTime @default(now())
+
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  usuario  Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@map("movimientos_inventario")
+}
+
+model Producto {
+  id              String   @id @default(cuid())
+  nombre          String
+  descripcion     String?
+  precioVenta     Decimal  @db.Decimal(10, 2)
+  costoProduccion Decimal  @db.Decimal(10, 2)
+  stock           Int      @default(0)
+  stockMinimo     Int      @default(10)
+  unidadMedida    String   @default("unidad")
+  estado          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  detallesVenta           DetalleVenta[]
+  movimientosInventario   MovimientoInventario[]
+  historialCambiosCliente HistorialCambiosCliente[]
+  producciones            Produccion[]
+
+  @@map("productos")
+}
+
+model HistorialCambiosCliente {
+  id            String   @id @default(cuid())
+  clienteId     String
+  productoId    String
+  cambio        String
+  valorAnterior String?
+  valorNuevo    String?
+  motivo        String?
+  createdAt     DateTime @default(now())
+
+  cliente  Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  @@map("historial_cambios_cliente")
+}
+
+model CompraInsumo {
+  id            String   @id @default(cuid())
+  proveedorId   String
+  usuarioId     String
+  fechaCompra   DateTime @default(now())
+  numeroFactura String
+  subtotal      Decimal  @db.Decimal(10, 2)
+  iva           Decimal  @db.Decimal(10, 2)
+  total         Decimal  @db.Decimal(10, 2)
+  estado        String   @default("recibida")
+  observaciones String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  proveedor Proveedor @relation(fields: [proveedorId], references: [id])
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id])
+
+  @@map("compras_insumo")
+}
+
+model Proveedor {
+  id             String   @id @default(cuid())
+  nombre         String
+  identificacion String   @unique
+  contacto       String?
+  telefono       String?
+  email          String?
+  direccion      String?
+  estado         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  comprasInsumo CompraInsumo[]
+
+  @@map("proveedores")
+}
+
+model Insumo {
+  id            String   @id @default(cuid())
+  nombre        String
+  descripcion   String?
+  unidadMedida  String   @default("unidad")
+  costoUnitario Decimal  @db.Decimal(10, 2)
+  stock         Int      @default(0)
+  stockMinimo   Int      @default(5)
+  estado        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  insumosProduccion InsumoProduccion[]
+
+  @@map("insumos")
+}
+
+model InsumoProduccion {
+  id            String  @id @default(cuid())
+  produccionId  String
+  insumoId      String
+  cantidad      Int
+  costoUnitario Decimal @db.Decimal(10, 2)
+  subtotal      Decimal @db.Decimal(10, 2)
+
+  produccion Produccion @relation(fields: [produccionId], references: [id], onDelete: Cascade)
+  insumo     Insumo     @relation(fields: [insumoId], references: [id], onDelete: Cascade)
+
+  @@map("insumos_produccion")
+}
+
+model Produccion {
+  id              String   @id @default(cuid())
+  productoId      String
+  fechaProduccion DateTime @default(now())
+  cantidad        Int
+  costoTotal      Decimal  @db.Decimal(10, 2)
+  estado          String   @default("completada")
+  observaciones   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  producto          Producto           @relation(fields: [productoId], references: [id])
+  insumosProduccion InsumoProduccion[]
+
+  @@map("producciones")
 }

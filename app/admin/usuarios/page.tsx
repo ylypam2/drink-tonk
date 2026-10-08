@@ -1,18 +1,22 @@
-import { redirect } from "next/navigation";
-import dbConnect from "@/lib/mongodb";
-import Usuario from "@/models/Usuario";
-import { requireAdmin } from "@/lib/auth";
-import { crearUsuario } from "@/app/actions/usuarioActions";
+import { prisma } from "@/lib/prisma";
+import { obtenerUsuarioSesion } from "@/lib/autorizacion";
+import CrearUsuarioForm from "@/components/CrearUsuarioForm";
+import AccionesUsuario from "@/components/AccionesUsuario";
+
+type Usuario = {
+  id: string;
+  nombre: string;
+  email: string;
+  rol: string;
+  estado: boolean;
+};
 
 export default async function UsuariosPage() {
-  const sesion = await requireAdmin();
+  const usuarioActual = await obtenerUsuarioSesion();
 
-  if (!sesion) {
-    redirect("/login");
-  }
-
-  await dbConnect();
-  const usuarios = await Usuario.find().sort({ createdAt: -1 }).lean();
+  const usuarios = await prisma.usuario.findMany({
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -39,69 +43,7 @@ export default async function UsuariosPage() {
           <h2 className="text-xl font-bold mb-4 text-gray-700">
             Crear usuario
           </h2>
-
-          <form action={crearUsuario} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nombre
-              </label>
-              <input
-                name="nombre"
-                type="text"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                placeholder="Nombre completo"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Correo
-              </label>
-              <input
-                name="email"
-                type="email"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                placeholder="correo@ejemplo.com"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contraseña
-              </label>
-              <input
-                name="password"
-                type="password"
-                required
-                minLength={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                placeholder="Mínimo 6 caracteres"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Rol
-              </label>
-              <select
-                name="rol"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="empleado">Empleado</option>
-                <option value="admin">Administrador</option>
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-md transition-colors"
-            >
-              Guardar usuario
-            </button>
-          </form>
+          <CrearUsuarioForm />
         </div>
 
         <div className="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -120,16 +62,26 @@ export default async function UsuariosPage() {
                     <th className="p-3">Correo</th>
                     <th className="p-3">Rol</th>
                     <th className="p-3">Estado</th>
+                    <th className="p-3">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {usuarios.map((usuario: any) => (
-                    <tr key={usuario._id.toString()} className="border-t">
+                  {usuarios.map((usuario) => (
+                    <tr key={usuario.id} className="border-t">
                       <td className="p-3">{usuario.nombre}</td>
                       <td className="p-3">{usuario.email}</td>
                       <td className="p-3 capitalize">{usuario.rol}</td>
                       <td className="p-3">
                         {usuario.estado ? "Activo" : "Inactivo"}
+                      </td>
+                      <td className="p-3">
+                        <AccionesUsuario
+                          usuarioId={usuario.id}
+                          nombre={usuario.nombre}
+                          estado={usuario.estado}
+                          rol={usuario.rol}
+                          esUsuarioActual={usuario.id === usuarioActual.id}
+                        />
                       </td>
                     </tr>
                   ))}

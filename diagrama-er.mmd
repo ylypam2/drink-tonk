@@ -1,0 +1,183 @@
+erDiagram
+    Factura ||--|| Venta : "corresponde a"
+    Venta ||--o{ DetalleVenta : "contiene"
+    Venta }o--|| Usuario : "registrada por"
+    Venta }o--o| Cliente : "pertenece a"
+    
+    DetalleVenta }o--|| Producto : "producto"
+    
+    Usuario ||--o{ MovimientoInventario : "realiza"
+    Usuario ||--o{ CompraInsumo : "registra"
+    
+    Producto ||--o{ MovimientoInventario : "afectado en"
+    Producto ||--o{ HistorialCambiosCliente : "tiene cambios"
+    Producto ||--o{ Produccion : "producido en"
+    
+    Cliente ||--o{ HistorialCambiosCliente : "tiene historial"
+    
+    Proveedor ||--o{ CompraInsumo : "provee"
+    
+    Insumo ||--o{ InsumoProduccion : "usado en"
+    Produccion ||--o{ InsumoProduccion : "utiliza"
+
+    Factura {
+        string id PK
+        string ventaId FK,UK
+        string numeroFactura UK
+        datetime fechaEmision
+        decimal(10,2) subtotal
+        decimal(10,2) iva
+        decimal(10,2) total
+        string estado
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Venta {
+        string id PK
+        string usuarioId FK
+        string clienteId FK
+        datetime fechaVenta
+        decimal(10,2) subtotal
+        decimal(10,2) iva
+        decimal(10,2) total
+        string metodoPago
+        string estado
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    DetalleVenta {
+        string id PK
+        string ventaId FK
+        string productoId FK
+        int cantidad
+        decimal(10,2) precioUnitario
+        decimal(10,2) subtotal
+        datetime createdAt
+    }
+
+    Usuario {
+        string id PK
+        string nombre
+        string email UK
+        string password
+        string rol
+        boolean estado
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Cliente {
+        string id PK
+        string nombre
+        string identificacion UK
+        string telefono
+        string email
+        string direccion
+        string tipoCliente
+        decimal(10,2) creditoDisponible
+        boolean estado
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    MovimientoInventario {
+        string id PK
+        string productoId FK
+        string usuarioId FK
+        string tipoMovimiento
+        int cantidad
+        int stockAnterior
+        int stockNuevo
+        string motivo
+        datetime createdAt
+    }
+
+    Producto {
+        string id PK
+        string nombre
+        string descripcion
+        decimal(10,2) precioVenta
+        decimal(10,2) costoProduccion
+        int stock
+        int stockMinimo
+        string unidadMedida
+        boolean estado
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    HistorialCambiosCliente {
+        string id PK
+        string clienteId FK
+        string productoId FK
+        string cambio
+        string valorAnterior
+        string valorNuevo
+        string motivo
+        datetime createdAt
+    }
+
+    CompraInsumo {
+        string id PK
+        string proveedorId FK
+        string usuarioId FK
+        datetime fechaCompra
+        string numeroFactura
+        decimal(10,2) subtotal
+        decimal(10,2) iva
+        decimal(10,2) total
+        string estado
+        string observaciones
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Proveedor {
+        string id PK
+        string nombre
+        string identificacion UK
+        string contacto
+        string telefono
+        string email
+        string direccion
+        boolean estado
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Insumo {
+        string id PK
+        string nombre
+        string descripcion
+        string unidadMedida
+        decimal(10,2) costoUnitario
+        int stock
+        int stockMinimo
+        boolean estado
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    InsumoProduccion {
+        string id PK
+        string produccionId FK
+        string insumoId FK
+        int cantidad
+        decimal(10,2) costoUnitario
+        decimal(10,2) subtotal
+    }
+
+    Produccion {
+        string id PK
+        string productoId FK
+        datetime fechaProduccion
+        int cantidad
+        decimal(10,2) costoTotal
+        string estado
+        string observaciones
+        datetime createdAt
+        datetime updatedAt
+    }
+
