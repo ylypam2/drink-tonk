@@ -53,12 +53,22 @@ export default function LoginPage() {
         return;
       }
 
-      window.localStorage.setItem(
-        "drink_tonk_usuario",
-        JSON.stringify(resultado.usuario)
-      );
+      window.localStorage.removeItem("drink_tonk_usuario");
 
-      router.push("/");
+      const rol = resultado.usuario.rol;
+      const returnTo = window.localStorage.getItem("drink_tonk_returnTo");
+      window.localStorage.removeItem("drink_tonk_returnTo");
+
+      if (returnTo === "/ventas" && (rol === "ADMIN" || rol === "EMPLEADO")) {
+        router.push("/ventas");
+      } else if (rol === "ADMIN") {
+        router.push("/admin");
+      } else if (rol === "EMPLEADO") {
+        router.push("/empleado");
+      } else {
+        setError("Rol de usuario no reconocido. Contacte al administrador.");
+        return;
+      }
       router.refresh();
     } catch {
       setError(

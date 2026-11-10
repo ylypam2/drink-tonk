@@ -21,7 +21,7 @@ const enlacesOperativos = [
 
 const enlacesAdministrador = [
   ...enlacesOperativos,
-  { href: "/admin", texto: "Administración" },
+  { href: "/admin", texto: "Panel de administrador" },
 ];
 
 export default function Navbar() {
@@ -29,20 +29,32 @@ export default function Navbar() {
   const router = useRouter();
 
   const [usuario, setUsuario] = useState<UsuarioSesion | null>(null);
+  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    const sesionGuardada = window.localStorage.getItem("drink_tonk_usuario");
-
-    if (!sesionGuardada) {
-      return;
+    async function fetchUsuario() {
+      try {
+        const respuesta = await fetch("/api/auth/me");
+        if (respuesta.ok) {
+          const resultado = await respuesta.json();
+          if (resultado.success && resultado.usuario) {
+            setUsuario(resultado.usuario);
+          } else {
+            setUsuario(null);
+          }
+        } else {
+          setUsuario(null);
+        }
+      } catch (error) {
+        console.error("Error al obtener usuario:", error);
+        setUsuario(null);
+      } finally {
+        setCargando(false);
+      }
     }
 
-    try {
-      setUsuario(JSON.parse(sesionGuardada));
-    } catch {
-      window.localStorage.removeItem("drink_tonk_usuario");
-    }
-  }, []);
+    fetchUsuario();
+  }, [pathname]);
 
   async function cerrarSesion() {
     try {
@@ -53,9 +65,7 @@ export default function Navbar() {
       console.error("No fue posible cerrar la sesión:", error);
     }
 
-    window.localStorage.removeItem("drink_tonk_usuario");
     setUsuario(null);
-
     router.replace("/login");
   }
 
@@ -66,6 +76,26 @@ export default function Navbar() {
 
   if (pathname === "/login") {
     return null;
+  }
+
+  if (cargando) {
+    return (
+      <header className="bg-[#2563eb] text-white shadow-md">
+        <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <Link
+            href="/"
+            className="flex items-center gap-3 text-xl font-bold tracking-wide transition hover:text-blue-100"
+          >
+            <img
+              src="/logo-drink-tonk.jpeg"
+              alt="Logo Drink Tonk"
+              className="h-9 w-9 rounded-full bg-white object-contain p-1"
+            />
+            <span>Drink Tonk</span>
+          </Link>
+        </nav>
+      </header>
+    );
   }
 
   return (
@@ -122,7 +152,7 @@ export default function Navbar() {
               href="/login"
               className="rounded-md border border-blue-200 px-3 py-1.5 font-semibold text-white transition hover:bg-white hover:text-blue-700"
             >
-              Login
+              Iniciar sesión
             </Link>
           )}
         </div>

@@ -6,8 +6,9 @@ export async function POST() {
     mensaje: "Sesión cerrada correctamente.",
   });
 
-  respuesta.cookies.delete("drink_tonk_session");
-  respuesta.cookies.delete("drink_tonk_role");
+  respuesta.cookies.delete({ name: "drink_tonk_session", path: "/" });
+  respuesta.cookies.delete({ name: "drink_tonk_role", path: "/" });
+  respuesta.cookies.delete({ name: "session", path: "/" });
 
   return respuesta;
 }

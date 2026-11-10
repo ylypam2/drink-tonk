@@ -164,14 +164,26 @@ export async function registrarVenta(
       });
 
       for (const detalle of detalles) {
-        await tx.producto.update({
+        const actualizacion = await tx.producto.updateMany({
           where: {
             id: detalle.productoId,
+            estado: true,
+            stock: {
+              gte: detalle.cantidad,
+            },
           },
           data: {
-            stock: detalle.stockNuevo,
+            stock: {
+              decrement: detalle.cantidad,
+            },
           },
         });
+
+        if (actualizacion.count !== 1) {
+          throw new Error(
+            "El stock cambió o el producto dejó de estar disponible. Actualiza la página y revisa la venta."
+          );
+        }
 
         await tx.movimientoInventario.create({
           data: {
@@ -200,7 +212,11 @@ export async function registrarVenta(
       });
 
       return venta;
-    });
+    },
+    {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    }
+  );
 
     revalidatePath("/ventas");
     revalidatePath("/productos");
@@ -212,6 +228,17 @@ export async function registrarVenta(
     };
   } catch (error) {
     console.error("Error al registrar venta:", error);
+
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2034"
+    ) {
+      return {
+        ok: false,
+        mensaje:
+          "Otra operación modificó el inventario al mismo tiempo. Actualiza la página, revisa el stock y vuelve a intentarlo.",
+      };
+    }
 
     return {
       ok: false,

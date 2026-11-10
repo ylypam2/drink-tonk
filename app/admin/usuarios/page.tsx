@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { obtenerUsuarioSesion } from "@/lib/autorizacion";
+import { verificarAdministradorParaPagina } from "@/lib/autorizacionPaginas";
 import CrearUsuarioForm from "@/components/CrearUsuarioForm";
 import AccionesUsuario from "@/components/AccionesUsuario";
 
@@ -12,7 +12,7 @@ type Usuario = {
 };
 
 export default async function UsuariosPage() {
-  const usuarioActual = await obtenerUsuarioSesion();
+  const usuarioActual = await verificarAdministradorParaPagina();
 
   const usuarios = await prisma.usuario.findMany({
     orderBy: { createdAt: "desc" },

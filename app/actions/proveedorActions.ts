@@ -2,8 +2,11 @@
 
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
+import { exigirAdministrador } from '@/lib/autorizacion'
 
 export async function crearProveedor(formData: FormData) {
+  await exigirAdministrador()
+
   const nombre = formData.get('nombre') as string
   const identificacion = formData.get('identificacion') as string
   const contacto = formData.get('contacto') as string

@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { crearProveedor } from "@/app/actions/proveedorActions";
+import { verificarAdministradorParaPagina } from "@/lib/autorizacionPaginas";
 
 export default async function ProveedoresPage() {
+  await verificarAdministradorParaPagina();
+
   const proveedores = await prisma.proveedor.findMany({
     orderBy: { createdAt: 'desc' }
   });

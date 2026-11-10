@@ -1,10 +1,15 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, useEffect } from "react";
 import {
   registrarVenta,
   type ResultadoVenta,
 } from "@/app/actions/ventaActions";
+import {
+  obtenerCarrito,
+  limpiarCarrito,
+  type ItemCarrito as ItemCarritoPersistente,
+} from "@/lib/carrito";
 
 type ProductoDisponible = {
   id: string;
@@ -42,6 +47,21 @@ export default function RegistrarVentaForm({
   const [mensaje, setMensaje] = useState("");
   const [esError, setEsError] = useState(false);
   const [pendiente, startTransition] = useTransition();
+  const [carritoPrecargado, setCarritoPrecargado] = useState(false);
+
+  useEffect(() => {
+    const carritoPersistente = obtenerCarrito();
+    if (carritoPersistente.length > 0) {
+      const itemsNormalizados: ItemCarrito[] = carritoPersistente.map(
+        (item) => ({
+          productoId: item.productoId,
+          cantidad: item.cantidad,
+        })
+      );
+      setItems(itemsNormalizados);
+      setCarritoPrecargado(true);
+    }
+  }, []);
 
   const productosPorId = useMemo(
     () => new Map(productos.map((producto) => [producto.id, producto])),
@@ -176,6 +196,8 @@ export default function RegistrarVentaForm({
           setItems([]);
           setClienteId("");
           setMetodoPago("EFECTIVO");
+          setCarritoPrecargado(false);
+          limpiarCarrito();
         }
       } catch {
         setMensaje("Ocurrió un error inesperado al registrar la venta.");
@@ -299,12 +321,25 @@ export default function RegistrarVentaForm({
                           disabled={pendiente}
                           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
                         >
-                          {productos.map((opcion) => (
-                            <option key={opcion.id} value={opcion.id}>
-                              {opcion.nombre} — stock: {opcion.stock}{" "}
-                              {opcion.unidadMedida}
-                            </option>
-                          ))}
+                          {productos.map((opcion) => {
+                            const seleccionadoEnOtraFila = items.some(
+                              (otroItem, otraPosicion) =>
+                                otraPosicion !== indice &&
+                                otroItem.productoId === opcion.id
+                            );
+
+                            return (
+                              <option
+                                key={opcion.id}
+                                value={opcion.id}
+                                disabled={seleccionadoEnOtraFila}
+                              >
+                                {opcion.nombre} — stock: {opcion.stock}{" "}
+                                {opcion.unidadMedida}
+                                {seleccionadoEnOtraFila ? " — ya agregado" : ""}
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
 

@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
+import { createToken } from "@/lib/jwt";
+import { normalizarRol } from "@/lib/roles";
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,6 +50,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const rolNormalizado = normalizarRol(usuario.rol);
+    if (!rolNormalizado.valido) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Rol de usuario no reconocido. Contacte al administrador.",
+        },
+        { status: 403 }
+      );
+    }
+
+    const token = await createToken(usuario.id);
+
     const respuesta = NextResponse.json(
       {
         success: true,
@@ -55,13 +70,13 @@ export async function POST(request: NextRequest) {
           id: usuario.id,
           nombre: usuario.nombre,
           email: usuario.email,
-          rol: usuario.rol,
+          rol: rolNormalizado.rol,
         },
       },
       { status: 200 }
     );
 
-    respuesta.cookies.set("drink_tonk_session", usuario.id, {
+    respuesta.cookies.set("drink_tonk_session", token, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
@@ -69,13 +84,7 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 8,
     });
 
-    respuesta.cookies.set("drink_tonk_role", usuario.rol, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 8,
-    });
+    respuesta.cookies.delete("drink_tonk_role");
 
     return respuesta;
   } catch (error) {

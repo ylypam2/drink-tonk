@@ -1,7 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import RegistrarVentaForm from "@/components/RegistrarVentaForm";
+import { requireEmpleadoOAdmin } from "@/lib/auth";
 
 export default async function VentasPage() {
+  const sesion = await requireEmpleadoOAdmin();
+
+  if (!sesion) {
+    return null;
+  }
+
   const [ventas, productos, clientes] = await Promise.all([
     prisma.venta.findMany({
       include: {
@@ -91,8 +98,8 @@ export default async function VentasPage() {
         </a>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="rounded-xl border bg-white p-6 shadow-sm">
           <h2 className="text-xl font-bold mb-4 text-gray-700">
             Historial de Ventas
           </h2>
@@ -102,74 +109,59 @@ export default async function VentasPage() {
           ) : (
             <div className="space-y-4">
               {ventas.map((venta) => (
-                <div key={venta.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-3">
+                <article key={venta.id} className="border-b border-slate-200 py-4 last:border-0">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="font-bold text-gray-800">
-                        Vendedor: {venta.usuario?.nombre}
+                      <p className="font-semibold text-slate-800">
+                        {venta.factura?.numeroFactura ?? `Venta ${venta.id.slice(-6)}`}
                       </p>
-                      {venta.cliente && (
-                        <p className="text-sm text-gray-600">
-                          Cliente: {venta.cliente.nombre}
-                        </p>
-                      )}
-                      <p className="text-sm text-gray-600">
-                        Método: {venta.metodoPago}
+
+                      <p className="mt-1 text-sm text-slate-600">
+                        Vendedor: {venta.usuario.nombre}
                       </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(venta.createdAt).toLocaleString()}
+
+                      <p className="text-sm text-slate-600">
+                        Cliente: {venta.cliente?.nombre ?? "Venta sin cliente registrado"}
+                      </p>
+
+                      <p className="text-sm text-slate-600">
+                        Pago: {venta.metodoPago}
                       </p>
                     </div>
-                    <p className="text-2xl font-bold text-green-600">
+
+                    <p className="font-bold text-emerald-700">
                       ${Number(venta.total).toFixed(2)}
                     </p>
                   </div>
-                  <div className="border-t pt-3">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Productos:</p>
+
+                  <div className="mt-3 space-y-1 border-l-2 border-slate-200 pl-3">
                     {venta.detallesVenta.map((detalle) => (
                       <div
                         key={detalle.id}
-                        className="flex justify-between text-sm text-gray-600"
+                        className="flex justify-between gap-4 text-sm text-slate-600"
                       >
                         <span>
-                          {detalle.producto?.nombre} x{detalle.cantidad}
+                          {detalle.producto.nombre} × {detalle.cantidad}{" "}
+                          {detalle.producto.unidadMedida}
                         </span>
 
-                        <span>
-                          ${Number(detalle.subtotal).toFixed(2)}
-                        </span>
+                        <span>${Number(detalle.subtotal).toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
-                </div>
+                </article>
               ))}
             </div>
           )}
-        </div>
+        </section>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <h2 className="text-xl font-bold mb-4 text-gray-700">
-            Información
-          </h2>
-          <div className="space-y-4">
-            <div className="bg-green-50 p-4 rounded-lg">
-              <p className="text-sm text-green-800">
-                <strong>Total ventas:</strong> {ventas.length}
-              </p>
-            </div>
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <strong>Productos disponibles:</strong> {productos.length}
-              </p>
-            </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <p className="text-sm text-purple-800">
-                <strong>Total vendido:</strong> $
-                {ventas.reduce((sum, v) => sum + Number(v.total), 0).toFixed(2)}
-              </p>
-            </div>
-          </div>
-        </div>
+        <RegistrarVentaForm
+          productos={productos.map((producto) => ({
+            ...producto,
+            precioVenta: producto.precioVenta.toString(),
+          }))}
+          clientes={clientes}
+        />
       </div>
     </div>
   );
