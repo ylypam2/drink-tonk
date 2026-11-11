@@ -4,6 +4,7 @@ export type ItemCarrito = {
   precioVenta: number;
   cantidad: number;
   unidadMedida: string;
+  imagenUrl?: string | null;
 };
 
 const CARRITO_KEY = "drink_tonk_carrito";
@@ -56,7 +57,7 @@ export function limpiarCarrito(): void {
 }
 
 export function agregarAlCarrito(
-  producto: { id: string; nombre: string; precioVenta: number; unidadMedida: string },
+  producto: { id: string; nombre: string; precioVenta: number; unidadMedida: string; imagenUrl?: string | null },
   cantidad: number
 ): ItemCarrito[] {
   const carrito = obtenerCarrito();
@@ -71,6 +72,7 @@ export function agregarAlCarrito(
       precioVenta: producto.precioVenta,
       cantidad,
       unidadMedida: producto.unidadMedida,
+      imagenUrl: producto.imagenUrl ?? null,
     });
   }
 

@@ -13,8 +13,42 @@ interface Producto {
   stockMinimo: number;
   unidadMedida: string;
   estado: boolean;
+  imagenUrl?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+const FORM_VACIO = {
+  nombre: "",
+  descripcion: "",
+  precioVenta: "",
+  costoProduccion: "",
+  stock: "",
+  stockMinimo: "",
+  unidadMedida: "unidad",
+  imagenUrl: "",
+};
+
+function MiniaturaProducto({ imagenUrl, nombre }: { imagenUrl?: string | null; nombre: string }) {
+  const [errorImagen, setErrorImagen] = useState(false);
+
+  if (!imagenUrl || errorImagen) {
+    return (
+      <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded bg-gray-200 text-[9px] text-gray-500">
+        Sin imagen
+      </div>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={imagenUrl}
+      alt={nombre}
+      onError={() => setErrorImagen(true)}
+      className="h-9 w-9 shrink-0 rounded object-cover"
+    />
+  );
 }
 
 export default function ProductosAdminPage() {
@@ -26,15 +60,7 @@ export default function ProductosAdminPage() {
   const [editingProducto, setEditingProducto] = useState<Producto | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [formData, setFormData] = useState({
-    nombre: "",
-    descripcion: "",
-    precioVenta: "",
-    costoProduccion: "",
-    stock: "",
-    stockMinimo: "",
-    unidadMedida: "unidad",
-  });
+  const [formData, setFormData] = useState(FORM_VACIO);
 
   useEffect(() => {
     fetchProductos();
@@ -83,6 +109,7 @@ export default function ProductosAdminPage() {
       formDataObj.append("costoProduccion", formData.costoProduccion);
       formDataObj.append("stockMinimo", formData.stockMinimo);
       formDataObj.append("unidadMedida", formData.unidadMedida);
+      formDataObj.append("imagenUrl", formData.imagenUrl);
 
       if (editingProducto) {
         formDataObj.append("id", editingProducto.id);
@@ -95,15 +122,7 @@ export default function ProductosAdminPage() {
         setSuccess("Producto creado correctamente");
       }
 
-      setFormData({
-        nombre: "",
-        descripcion: "",
-        precioVenta: "",
-        costoProduccion: "",
-        stock: "",
-        stockMinimo: "",
-        unidadMedida: "unidad",
-      });
+      setFormData(FORM_VACIO);
       fetchProductos();
     } catch (err: any) {
       setError(err.message || "Error al guardar producto");
@@ -122,6 +141,7 @@ export default function ProductosAdminPage() {
       stock: producto.stock.toString(),
       stockMinimo: producto.stockMinimo.toString(),
       unidadMedida: producto.unidadMedida,
+      imagenUrl: producto.imagenUrl ?? "",
     });
     setError(null);
     setSuccess(null);
@@ -155,15 +175,7 @@ export default function ProductosAdminPage() {
 
   const cancelEdit = () => {
     setEditingProducto(null);
-    setFormData({
-      nombre: "",
-      descripcion: "",
-      precioVenta: "",
-      costoProduccion: "",
-      stock: "",
-      stockMinimo: "",
-      unidadMedida: "unidad",
-    });
+    setFormData(FORM_VACIO);
     setError(null);
     setSuccess(null);
   };
@@ -318,6 +330,42 @@ export default function ProductosAdminPage() {
               </select>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Enlace de imagen (opcional)
+              </label>
+              <input
+                name="imagenUrl"
+                type="url"
+                value={formData.imagenUrl}
+                onChange={(e) => setFormData({ ...formData, imagenUrl: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="https://ejemplo.com/imagen.jpg"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Solo URLs http o https. Se muestra como vista previa; no se
+                guarda hasta confirmar el producto.
+              </p>
+              {formData.imagenUrl.trim() !== "" && (
+                <div className="mt-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={formData.imagenUrl}
+                    alt="Vista previa de la imagen del producto"
+                    className="h-20 w-20 rounded-md border border-gray-200 object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
+              {editingProducto?.imagenUrl && formData.imagenUrl.trim() === "" && (
+                <p className="mt-1 text-xs text-amber-600">
+                  Al guardar sin enlace se quitará la imagen actual del producto.
+                </p>
+              )}
+            </div>
+
             <div className="flex gap-2">
               <button
                 type="submit"
@@ -374,7 +422,12 @@ export default function ProductosAdminPage() {
                 <tbody>
                   {productos.map((producto) => (
                     <tr key={producto.id} className="border-t">
-                      <td className="p-3">{producto.nombre}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <MiniaturaProducto imagenUrl={producto.imagenUrl} nombre={producto.nombre} />
+                          <span>{producto.nombre}</span>
+                        </div>
+                      </td>
                       <td className="p-3">${Number(producto.precioVenta).toFixed(2)}</td>
                       <td className="p-3">
                         <span className={producto.stock <= producto.stockMinimo ? "text-red-600 font-medium" : ""}>

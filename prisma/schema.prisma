@@ -124,6 +124,7 @@ model Producto {
   stock           Int      @default(0)
   stockMinimo     Int      @default(10)
   unidadMedida    String   @default("unidad")
+  imagenUrl       String?
   estado          Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

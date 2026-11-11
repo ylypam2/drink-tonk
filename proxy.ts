@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/jwt";
 
-const rutasPublicas = ["/login"];
+const rutasPublicas = ["/login", "/ventas"];
 const rutasPublicasAPI = ["/api/productos", "/api/productos/", "/api/auth/me"];
 
 export async function proxy(request: NextRequest) {
@@ -12,9 +12,13 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/favicon.ico") ||
     pathname.includes(".");
 
+  const esCatalogoPublico =
+    pathname === "/productos" &&
+    (request.method === "GET" || request.method === "HEAD");
+
   const esRutaPublica = rutasPublicas.includes(pathname);
 
-  if (esArchivoEstatico || esRutaPublica) {
+  if (esArchivoEstatico || esRutaPublica || esCatalogoPublico) {
     return NextResponse.next();
   }
 

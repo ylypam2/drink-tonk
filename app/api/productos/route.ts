@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
-import { obtenerUsuarioSesion, ErrorTipo, ErrorAutorizacion } from "@/lib/autorizacion";
+import { obtenerUsuarioSesion, exigirAdministrador, ErrorTipo, ErrorAutorizacion } from "@/lib/autorizacion";
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
         precioVenta: true,
         stock: true,
         unidadMedida: true,
+        imagenUrl: true,
         estado: true,
         createdAt: true,
         updatedAt: true,
@@ -81,17 +82,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const usuario = await obtenerUsuarioSesion();
-
-    if (!usuario) {
-      return Response.json(
-        {
-          success: false,
-          error: "No autorizado",
-        },
-        { status: 401 }
-      );
-    }
+    await exigirAdministrador();
 
     const body = await request.json();
 

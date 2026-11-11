@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { exigirAdministrador } from "@/lib/autorizacion";
+import { validarUrlImagen } from "@/lib/imagen";
 
 export async function crearProducto(formData: FormData) {
   await exigirAdministrador();
@@ -13,6 +14,9 @@ export async function crearProducto(formData: FormData) {
   const stockMinimo = formData.get("stockMinimo");
   const unidadMedida = formData.get("unidadMedida")?.toString() || "unidad";
   const descripcion = formData.get("descripcion")?.toString().trim() || "";
+  const imagenUrl = validarUrlImagen(
+    formData.get("imagenUrl")?.toString()
+  );
 
   if (!nombre || nombre === "") throw new Error("El nombre es obligatorio y no puede estar vacío");
   
@@ -37,6 +41,7 @@ export async function crearProducto(formData: FormData) {
       stock: stockNum,
       stockMinimo: stockMinimoNum,
       unidadMedida,
+      imagenUrl,
       estado: true,
     },
   });
@@ -55,6 +60,9 @@ export async function actualizarProducto(formData: FormData) {
   const stockMinimo = formData.get("stockMinimo");
   const unidadMedida = formData.get("unidadMedida")?.toString() || "unidad";
   const descripcion = formData.get("descripcion")?.toString().trim() || "";
+  const imagenUrl = validarUrlImagen(
+    formData.get("imagenUrl")?.toString()
+  );
 
   if (!id) throw new Error("ID no válido");
   if (!nombre || nombre === "") throw new Error("El nombre es obligatorio y no puede estar vacío");
@@ -85,6 +93,7 @@ export async function actualizarProducto(formData: FormData) {
       costoProduccion: costoProduccionNum,
       stockMinimo: stockMinimoNum,
       unidadMedida,
+      imagenUrl,
     },
   });
 

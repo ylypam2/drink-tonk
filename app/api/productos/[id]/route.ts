@@ -43,6 +43,7 @@ export async function GET(
       precioVenta: producto.precioVenta,
       stock: producto.stock,
       unidadMedida: producto.unidadMedida,
+      imagenUrl: producto.imagenUrl,
       estado: producto.estado,
       createdAt: producto.createdAt,
       updatedAt: producto.updatedAt,

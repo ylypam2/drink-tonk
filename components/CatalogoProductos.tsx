@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { obtenerUsuarioSesion } from "@/lib/autorizacion";
 import {
   obtenerCarrito,
   agregarAlCarrito,
@@ -19,7 +18,41 @@ type Producto = {
   precioVenta: number;
   stock: number;
   unidadMedida: string;
+  imagenUrl?: string | null;
 };
+
+function MiniaturaProducto({
+  imagenUrl,
+  nombre,
+  className = "h-10 w-10",
+}: {
+  imagenUrl?: string | null;
+  nombre: string;
+  className?: string;
+}) {
+  const [errorImagen, setErrorImagen] = useState(false);
+
+  if (!imagenUrl || errorImagen) {
+    return (
+      <div
+        className={`${className} flex shrink-0 items-center justify-center rounded-md bg-slate-200 text-[10px] font-medium text-slate-500`}
+        aria-hidden="true"
+      >
+        Sin imagen
+      </div>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={imagenUrl}
+      alt={nombre}
+      onError={() => setErrorImagen(true)}
+      className={`${className} shrink-0 rounded-md object-cover`}
+    />
+  );
+}
 
 type Props = {
   productos: Producto[];
@@ -30,26 +63,42 @@ export default function CatalogoProductos({ productos }: Props) {
   const [busqueda, setBusqueda] = useState("");
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [mostrarCarrito, setMostrarCarrito] = useState(false);
-  const [cargandoUsuario, setCargandoUsuario] = useState(false);
-  const [usuarioAutenticado, setUsuarioAutenticado] = useState(false);
+  const [mostrarAvisoAcceso, setMostrarAvisoAcceso] = useState(false);
+  const [cargandoUsuario, setCargandoUsuario] = useState(true);
+  const [sesion, setSesion] = useState<{ rol: string } | null>(null);
 
   useEffect(() => {
     setCarrito(obtenerCarrito());
   }, []);
 
   useEffect(() => {
+    let activo = true;
+
     async function verificarSesion() {
-      setCargandoUsuario(true);
       try {
-        await obtenerUsuarioSesion();
-        setUsuarioAutenticado(true);
+        const respuesta = await fetch("/api/auth/me");
+        if (respuesta.ok) {
+          const resultado = await respuesta.json();
+          const usuario = resultado?.usuario;
+          if (
+            resultado?.success &&
+            usuario &&
+            (usuario.rol === "ADMIN" || usuario.rol === "EMPLEADO")
+          ) {
+            if (activo) setSesion(usuario);
+          }
+        }
       } catch {
-        setUsuarioAutenticado(false);
+        // Sin sesión válida: el flujo de acceso se muestra al terminar la compra.
       } finally {
-        setCargandoUsuario(false);
+        if (activo) setCargandoUsuario(false);
       }
     }
+
     verificarSesion();
+    return () => {
+      activo = false;
+    };
   }, []);
 
   const productosFiltrados = productos.filter((producto) =>
@@ -62,6 +111,11 @@ export default function CatalogoProductos({ productos }: Props) {
   );
   const iva = subtotal * 0.19;
   const total = subtotal + iva;
+
+  function handleIniciarSesion() {
+    window.localStorage.setItem("drink_tonk_returnTo", "/ventas");
+    router.push("/login");
+  }
 
   function handleAgregar(producto: Producto, cantidad: number) {
     if (cantidad <= 0 || cantidad > producto.stock) {
@@ -87,20 +141,14 @@ export default function CatalogoProductos({ productos }: Props) {
     setCarrito([]);
   }
 
-  async function handleTerminarCompra() {
+  function handleTerminarCompra() {
     if (carrito.length === 0) {
       alert("El carrito está vacío");
       return;
     }
 
-    if (!usuarioAutenticado) {
-      const confirmacion = confirm(
-        "La finalización de esta venta requiere acceso de empleado o administrador. ¿Deseas iniciar sesión?"
-      );
-      if (confirmacion) {
-        localStorage.setItem("drink_tonk_returnTo", "/ventas");
-        router.push("/login");
-      }
+    if (!sesion) {
+      setMostrarAvisoAcceso(true);
       return;
     }
 
@@ -152,9 +200,16 @@ export default function CatalogoProductos({ productos }: Props) {
                 className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
               >
                 <div className="p-6">
-                  <h3 className="font-bold text-lg text-gray-800 mb-2">
-                    {producto.nombre}
-                  </h3>
+                  <div className="mb-3 flex items-start gap-3">
+                    <MiniaturaProducto
+                      imagenUrl={producto.imagenUrl}
+                      nombre={producto.nombre}
+                      className="h-14 w-14"
+                    />
+                    <h3 className="font-bold text-lg text-gray-800">
+                      {producto.nombre}
+                    </h3>
+                  </div>
                   {producto.descripcion && (
                     <p className="text-sm text-gray-600 mb-4">
                       {producto.descripcion}
@@ -227,14 +282,21 @@ export default function CatalogoProductos({ productos }: Props) {
                         key={item.productoId}
                         className="flex items-center justify-between border-b pb-4"
                       >
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-800">
-                            {item.nombre}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            ${item.precioVenta.toFixed(2)} × {item.cantidad}{" "}
-                            {item.unidadMedida}
-                          </p>
+                        <div className="flex-1 flex items-center gap-3">
+                          <MiniaturaProducto
+                            imagenUrl={item.imagenUrl}
+                            nombre={item.nombre}
+                            className="h-9 w-9"
+                          />
+                          <div>
+                            <p className="font-medium text-gray-800">
+                              {item.nombre}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              ${item.precioVenta.toFixed(2)} × {item.cantidad}{" "}
+                              {item.unidadMedida}
+                            </p>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <input
@@ -270,32 +332,59 @@ export default function CatalogoProductos({ productos }: Props) {
                       <span>${iva.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between font-bold text-gray-800">
-                      <span>Total</span>
+                      <span>Total estimado</span>
                       <span>${total.toFixed(2)}</span>
                     </div>
+                    <p className="text-xs text-gray-500">
+                      El total definitivo lo calcula el servidor al confirmar la
+                      venta.
+                    </p>
                   </div>
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleVaciar}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
-                    >
-                      Vaciar
-                    </button>
-                    <button
-                      onClick={() => setMostrarCarrito(false)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
-                    >
-                      Seguir comprando
-                    </button>
-                    <button
-                      onClick={handleTerminarCompra}
-                      disabled={cargandoUsuario}
-                      className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 disabled:bg-gray-400"
-                    >
-                      Terminar compra
-                    </button>
-                  </div>
+                  {mostrarAvisoAcceso ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 mb-4">
+                      <p className="text-sm text-amber-800">
+                        La finalización de esta venta requiere acceso de empleado
+                        o administrador.
+                      </p>
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={handleIniciarSesion}
+                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+                        >
+                          Iniciar sesión
+                        </button>
+                        <button
+                          onClick={() => setMostrarAvisoAcceso(false)}
+                          className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
+                        >
+                          Seguir comprando
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleVaciar}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
+                      >
+                        Vaciar
+                      </button>
+                      <button
+                        onClick={() => setMostrarCarrito(false)}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
+                      >
+                        Seguir comprando
+                      </button>
+                      <button
+                        onClick={handleTerminarCompra}
+                        disabled={cargandoUsuario}
+                        className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 disabled:bg-gray-400"
+                      >
+                        Terminar compra
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
             </div>

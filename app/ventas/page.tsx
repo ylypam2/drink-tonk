@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import RegistrarVentaForm from "@/components/RegistrarVentaForm";
+import AccesoVentaRequerido from "@/components/AccesoVentaRequerido";
 import { requireEmpleadoOAdmin } from "@/lib/auth";
 
 export default async function VentasPage() {
   const sesion = await requireEmpleadoOAdmin();
 
   if (!sesion) {
-    return null;
+    return <AccesoVentaRequerido />;
   }
 
   const [ventas, productos, clientes] = await Promise.all([
@@ -57,6 +58,7 @@ export default async function VentasPage() {
         precioVenta: true,
         stock: true,
         unidadMedida: true,
+        imagenUrl: true,
       },
       orderBy: {
         nombre: "asc",
@@ -91,7 +93,7 @@ export default async function VentasPage() {
         </div>
 
         <a
-          href="/admin"
+          href={sesion.rol === "ADMIN" ? "/admin" : "/empleado"}
           className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900"
         >
           Volver al panel
